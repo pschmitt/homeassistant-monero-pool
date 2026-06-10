@@ -23,6 +23,7 @@
         "description": "Connect Home Assistant to the XMRig proxy /1/workers endpoint.",
         "data": {
           "url": "Workers endpoint URL",
+          "ssh_host": "SSH host",
           "token": "API token",
           "name": "Name",
           "verify_ssl": "Verify SSL certificate"
@@ -35,6 +36,7 @@
           "wallet": "Wallet address",
           "api_url": "API URL",
           "url": "Workers endpoint URL",
+          "ssh_host": "SSH host",
           "token": "API token",
           "name": "Name",
           "verify_ssl": "Verify SSL certificate"
@@ -105,4 +107,3 @@
     }
   }
 }
-

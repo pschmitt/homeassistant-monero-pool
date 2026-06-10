@@ -42,9 +42,17 @@ For XMRig proxy, enter the full workers endpoint URL, for example:
 http://10.0.0.10:9674/1/workers
 ```
 
+If the proxy HTTP API is only bound to localhost on the mining host, set the
+endpoint URL to the remote localhost URL and fill **SSH host** with the host HA
+should SSH into:
+
+```text
+Workers endpoint URL: http://127.0.0.1:9674/1/workers
+SSH host: pschmitt@rofl-12.brkn.lol
+```
+
 If your proxy API requires an access token, enter it in the token field.
 
 ## License
 
 GPL-3.0-or-later - see [LICENSE](LICENSE).
-

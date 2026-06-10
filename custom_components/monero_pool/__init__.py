@@ -15,6 +15,7 @@ from .api import HashvaultClient, XmrigProxyClient
 from .const import (
     CONF_API_URL,
     CONF_MODE,
+    CONF_SSH_HOST,
     CONF_TOKEN,
     CONF_VERIFY_SSL,
     CONF_WALLET,
@@ -45,6 +46,7 @@ def create_client(
         session=session,
         url=data[CONF_URL],
         token=data.get(CONF_TOKEN, ""),
+        ssh_host=data.get(CONF_SSH_HOST, ""),
     )
 
 
@@ -82,4 +84,3 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 async def async_update_listener(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
     """Reload the integration after options changes."""
     await hass.config_entries.async_reload(config_entry.entry_id)
-

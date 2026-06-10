@@ -60,7 +60,7 @@ HASHVAULT_DESCRIPTIONS: tuple[MoneroPoolSensorDescription, ...] = (
     MoneroPoolSensorDescription(
         key="confirmed_balance",
         translation_key="confirmed_balance",
-        icon="cib:monero",
+        icon="mdi:wallet",
         native_unit_of_measurement="XMR",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=6,
@@ -364,4 +364,3 @@ class XmrigWorkerHashrateSensor(MoneroPoolEntity, SensorEntity):
             "hashrate_lifetime": worker.hashrate_lifetime,
             "raw": worker.raw,
         }
-

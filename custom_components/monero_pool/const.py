@@ -10,6 +10,7 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 CONF_MODE = "mode"
 CONF_WALLET = "wallet"
 CONF_API_URL = "api_url"
+CONF_SSH_HOST = "ssh_host"
 CONF_TOKEN = "token"
 CONF_VERIFY_SSL = "verify_ssl"
 
@@ -24,4 +25,3 @@ DEFAULT_REQUEST_TIMEOUT = 20
 DEFAULT_VERIFY_SSL = True
 
 PICOMONERO = 1_000_000_000_000
-

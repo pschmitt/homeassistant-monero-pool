@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -248,12 +249,14 @@ class XmrigProxyClient:
         session: ClientSession,
         url: str,
         token: str = "",
+        ssh_host: str = "",
         request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
     ) -> None:
         """Initialize the client."""
         self.url = normalize_url(url)
         self._session = session
         self._token = token
+        self._ssh_host = ssh_host.strip()
         self._request_timeout = request_timeout
 
     @property
@@ -274,6 +277,9 @@ class XmrigProxyClient:
 
     async def async_fetch_data(self) -> XmrigProxyStats:
         """Fetch and normalize XMRig proxy stats."""
+        if self._ssh_host:
+            return self._normalize(await self._async_fetch_data_via_ssh())
+
         headers = {}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
@@ -292,6 +298,51 @@ class XmrigProxyClient:
         if not isinstance(payload, Mapping):
             raise MoneroPoolConnectionError("Unexpected XMRig proxy response")
         return self._normalize(payload)
+
+    async def _async_fetch_data_via_ssh(self) -> Mapping[str, Any]:
+        """Fetch XMRig proxy stats by running curl on a remote host via SSH."""
+        command = [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=10",
+            self._ssh_host,
+            "--",
+            "curl",
+            "-fsSL",
+            "--max-time",
+            str(self._request_timeout),
+        ]
+        if self._token:
+            command.extend(["-H", f"Authorization: Bearer {self._token}"])
+        command.append(self.url)
+
+        try:
+            async with asyncio.timeout(self._request_timeout + 15):
+                process = await asyncio.create_subprocess_exec(
+                    *command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await process.communicate()
+        except (OSError, TimeoutError) as err:
+            raise MoneroPoolConnectionError("Failed to fetch XMRig proxy stats via SSH") from err
+
+        if process.returncode != 0:
+            message = stderr.decode(errors="replace").strip()
+            raise MoneroPoolConnectionError(
+                f"XMRig proxy SSH fetch failed: {message or process.returncode}"
+            )
+
+        try:
+            payload = json.loads(stdout.decode())
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise MoneroPoolConnectionError("Unexpected XMRig proxy SSH response") from err
+
+        if not isinstance(payload, Mapping):
+            raise MoneroPoolConnectionError("Unexpected XMRig proxy SSH response")
+        return payload
 
     def _normalize(self, payload: Mapping[str, Any]) -> XmrigProxyStats:
         """Normalize an XMRig proxy workers payload."""
@@ -356,4 +407,3 @@ class XmrigProxyClient:
             hashrate_lifetime=_safe_rate(rates, 5),
             raw=raw,
         )
-

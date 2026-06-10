@@ -25,6 +25,7 @@ from .api import normalize_url
 from .const import (
     CONF_API_URL,
     CONF_MODE,
+    CONF_SSH_HOST,
     CONF_TOKEN,
     CONF_VERIFY_SSL,
     CONF_WALLET,
@@ -50,7 +51,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     finally:
         await client.async_close()
 
-    unique_source = data[CONF_WALLET] if data[CONF_MODE] == MODE_HASHVAULT else data[CONF_URL]
+    unique_source = data[CONF_WALLET] if data[CONF_MODE] == MODE_HASHVAULT else (
+        f"{data.get(CONF_SSH_HOST, '')}:{data[CONF_URL]}"
+    )
     return {
         "title": data.get(CONF_NAME) or client.server_name,
         "unique_id": f"{data[CONF_MODE]}:{unique_source}",
@@ -92,6 +95,7 @@ def xmrig_proxy_schema(
                 CONF_URL,
                 default=defaults.get(CONF_URL, DEFAULT_XMRIG_PROXY_URL),
             ): TextSelector(),
+            vol.Optional(CONF_SSH_HOST, default=defaults.get(CONF_SSH_HOST, "")): TextSelector(),
             token_marker: TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
             vol.Optional(
                 CONF_NAME,
@@ -176,6 +180,7 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             data = {
                 CONF_MODE: MODE_XMRIG_PROXY,
                 CONF_URL: normalize_url(user_input[CONF_URL]),
+                CONF_SSH_HOST: user_input.get(CONF_SSH_HOST, "").strip(),
                 CONF_TOKEN: user_input.get(CONF_TOKEN, ""),
                 CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
             }
@@ -263,6 +268,7 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             data = {
                 **entry.data,
                 CONF_URL: normalize_url(user_input[CONF_URL]),
+                CONF_SSH_HOST: user_input.get(CONF_SSH_HOST, "").strip(),
                 CONF_TOKEN: user_input.get(CONF_TOKEN) or entry.data.get(CONF_TOKEN, ""),
                 CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
             }
@@ -325,4 +331,3 @@ class MoneroPoolOptionsFlow(OptionsFlow):
                 }
             ),
         )
-
