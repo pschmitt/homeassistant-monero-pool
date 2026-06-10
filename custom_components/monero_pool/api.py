@@ -307,6 +307,8 @@ class XmrigProxyClient:
             "BatchMode=yes",
             "-o",
             "ConnectTimeout=10",
+            "-o",
+            "UserKnownHostsFile=/config/.ssh/known_hosts",
             self._ssh_host,
             "--",
             "curl",
