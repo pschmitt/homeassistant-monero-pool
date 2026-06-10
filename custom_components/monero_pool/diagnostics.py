@@ -8,7 +8,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import CONF_TOKEN, CONF_WALLET, DOMAIN
+from .const import (
+    CONF_SSH_KNOWN_HOSTS,
+    CONF_SSH_PRIVATE_KEY,
+    CONF_TOKEN,
+    CONF_WALLET,
+    DOMAIN,
+)
 
 
 async def async_get_config_entry_diagnostics(
@@ -17,8 +23,9 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     data = dict(config_entry.data)
-    if data.get(CONF_TOKEN):
-        data[CONF_TOKEN] = "**REDACTED**"
+    for secret in (CONF_TOKEN, CONF_SSH_PRIVATE_KEY, CONF_SSH_KNOWN_HOSTS):
+        if data.get(secret):
+            data[secret] = "**REDACTED**"
     if data.get(CONF_WALLET):
         wallet = data[CONF_WALLET]
         data[CONF_WALLET] = f"{wallet[:8]}...{wallet[-8:]}" if len(wallet) > 20 else "**REDACTED**"

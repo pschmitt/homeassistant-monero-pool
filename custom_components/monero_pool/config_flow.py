@@ -280,7 +280,8 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 **entry.data,
                 CONF_URL: normalize_url(user_input[CONF_URL]),
                 CONF_SSH_HOST: user_input.get(CONF_SSH_HOST, "").strip(),
-                CONF_SSH_KNOWN_HOSTS: user_input.get(CONF_SSH_KNOWN_HOSTS, ""),
+                CONF_SSH_KNOWN_HOSTS: user_input.get(CONF_SSH_KNOWN_HOSTS)
+                or entry.data.get(CONF_SSH_KNOWN_HOSTS, ""),
                 CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY) or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
                 CONF_TOKEN: user_input.get(CONF_TOKEN) or entry.data.get(CONF_TOKEN, ""),
                 CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],

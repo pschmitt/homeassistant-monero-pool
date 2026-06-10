@@ -31,13 +31,13 @@ class MoneroPoolCoordinator(DataUpdateCoordinator[MoneroPoolData]):
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=f"{DOMAIN}_{config_entry.entry_id}",
             update_interval=timedelta(
                 seconds=config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             ),
         )
         self.client = client
-        self.config_entry = config_entry
 
     async def _async_update_data(self) -> MoneroPoolData:
         """Fetch data from the configured source."""

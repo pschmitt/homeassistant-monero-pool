@@ -8,12 +8,12 @@ import json
 import logging
 import os
 import shlex
-import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import quote, urlparse
 
+import asyncssh
 from aiohttp import ClientError, ClientResponseError, ClientSession
 
 from .const import DEFAULT_REQUEST_TIMEOUT, PICOMONERO
@@ -312,23 +312,16 @@ class XmrigProxyClient:
 
     async def _async_fetch_data_via_ssh(self) -> Mapping[str, Any]:
         """Fetch XMRig proxy stats via asyncssh by running curl on the remote host."""
-        try:
-            import asyncssh  # noqa: PLC0415
-        except ImportError as err:
-            raise MoneroPoolConnectionError(
-                "asyncssh is required for SSH connectivity"
-            ) from err
-
-        known_hosts_tmp: str | None = None
-
         # Build known_hosts: prefer inline config, fall back to discovered files
         if self._ssh_known_hosts:
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".known_hosts", delete=False
-            ) as f:
-                f.write(self._ssh_known_hosts)
-                known_hosts_tmp = f.name
-            known_hosts: str | list[str] | None = known_hosts_tmp
+            try:
+                known_hosts: Any = asyncssh.import_known_hosts(
+                    self._ssh_known_hosts + "\n"
+                )
+            except (ValueError, asyncssh.Error) as err:
+                raise MoneroPoolConnectionError(
+                    f"Invalid SSH known_hosts data: {err}"
+                ) from err
         else:
             known_hosts = [
                 p
@@ -343,7 +336,10 @@ class XmrigProxyClient:
         # Build client_keys: use provided key or auto-discover identity files
         if self._ssh_private_key:
             try:
-                client_keys: Any = [asyncssh.import_private_key(self._ssh_private_key)]
+                # PEM/OpenSSH key material expects a trailing newline.
+                client_keys: Any = [
+                    asyncssh.import_private_key(self._ssh_private_key + "\n")
+                ]
             except asyncssh.KeyImportError as err:
                 raise MoneroPoolAuthError(f"Invalid SSH private key: {err}") from err
         else:
@@ -397,13 +393,10 @@ class XmrigProxyClient:
             raise MoneroPoolConnectionError(f"SSH error: {err}") from err
         except (OSError, TimeoutError) as err:
             raise MoneroPoolConnectionError("Failed to fetch XMRig proxy stats via SSH") from err
-        finally:
-            if known_hosts_tmp:
-                os.unlink(known_hosts_tmp)
 
         if result.exit_status != 0:
             msg = (result.stderr or "").strip()
-            _LOGGER.warning("SSH fetch failed (exit %d): %s", result.exit_status, msg)
+            _LOGGER.debug("SSH fetch failed (exit %d): %s", result.exit_status, msg)
             raise MoneroPoolConnectionError(
                 f"XMRig proxy SSH fetch failed: {msg or result.exit_status}"
             )
