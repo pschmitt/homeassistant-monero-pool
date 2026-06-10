@@ -1,0 +1,9 @@
+{
+  "name": "Monero Pool",
+  "domains": [
+    "monero_pool"
+  ],
+  "homeassistant": "2025.1.0",
+  "render_readme": true
+}
+

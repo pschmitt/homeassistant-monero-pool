@@ -1,0 +1,17 @@
+{
+  "domain": "monero_pool",
+  "name": "Monero Pool",
+  "codeowners": [
+    "@pschmitt"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/pschmitt/homeassistant-monero-pool",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/pschmitt/homeassistant-monero-pool/issues",
+  "loggers": [
+    "custom_components.monero_pool"
+  ],
+  "version": "0.1.0"
+}
+

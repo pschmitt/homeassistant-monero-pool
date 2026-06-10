@@ -1,0 +1,108 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Monero stats source",
+        "menu_options": {
+          "hashvault": "Hashvault.pro wallet",
+          "xmrig_proxy": "XMRig proxy"
+        }
+      },
+      "hashvault": {
+        "title": "Add Hashvault.pro wallet",
+        "description": "Connect Home Assistant to Hashvault.pro wallet stats.",
+        "data": {
+          "wallet": "Wallet address",
+          "api_url": "API URL",
+          "name": "Name",
+          "verify_ssl": "Verify SSL certificate"
+        }
+      },
+      "xmrig_proxy": {
+        "title": "Add XMRig proxy",
+        "description": "Connect Home Assistant to the XMRig proxy /1/workers endpoint.",
+        "data": {
+          "url": "Workers endpoint URL",
+          "token": "API token",
+          "name": "Name",
+          "verify_ssl": "Verify SSL certificate"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Monero stats source",
+        "description": "Update the connection settings. Leave the token empty to keep the current one.",
+        "data": {
+          "wallet": "Wallet address",
+          "api_url": "API URL",
+          "url": "Workers endpoint URL",
+          "token": "API token",
+          "name": "Name",
+          "verify_ssl": "Verify SSL certificate"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the source.",
+      "invalid_auth": "Authentication failed.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This Monero stats source is already configured.",
+      "reconfigure_successful": "Configuration updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Monero Pool options",
+        "data": {
+          "scan_interval": "Update interval in seconds"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "hash_rate": {
+        "name": "Hashrate"
+      },
+      "miners": {
+        "name": "Miners"
+      },
+      "workers": {
+        "name": "Workers"
+      },
+      "confirmed_balance": {
+        "name": "Confirmed Balance"
+      },
+      "payout_progress": {
+        "name": "Payout Progress"
+      },
+      "total_paid": {
+        "name": "Total Paid"
+      },
+      "payout_threshold": {
+        "name": "Payout Threshold"
+      },
+      "last_withdrawal": {
+        "name": "Last Withdrawal"
+      },
+      "hashrate_1m": {
+        "name": "Hashrate 1m"
+      },
+      "hashrate_10m": {
+        "name": "Hashrate 10m"
+      },
+      "hashrate_1h": {
+        "name": "Hashrate 1h"
+      },
+      "accepted": {
+        "name": "Accepted Shares"
+      },
+      "rejected": {
+        "name": "Rejected Shares"
+      }
+    }
+  }
+}
+
