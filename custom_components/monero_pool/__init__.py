@@ -16,6 +16,8 @@ from .const import (
     CONF_API_URL,
     CONF_MODE,
     CONF_SSH_HOST,
+    CONF_SSH_KNOWN_HOSTS,
+    CONF_SSH_PRIVATE_KEY,
     CONF_TOKEN,
     CONF_VERIFY_SSL,
     CONF_WALLET,
@@ -47,6 +49,8 @@ def create_client(
         url=data[CONF_URL],
         token=data.get(CONF_TOKEN, ""),
         ssh_host=data.get(CONF_SSH_HOST, ""),
+        ssh_known_hosts=data.get(CONF_SSH_KNOWN_HOSTS, ""),
+        ssh_private_key=data.get(CONF_SSH_PRIVATE_KEY, ""),
     )
 
 

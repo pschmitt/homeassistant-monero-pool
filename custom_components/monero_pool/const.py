@@ -11,6 +11,8 @@ CONF_MODE = "mode"
 CONF_WALLET = "wallet"
 CONF_API_URL = "api_url"
 CONF_SSH_HOST = "ssh_host"
+CONF_SSH_KNOWN_HOSTS = "ssh_known_hosts"
+CONF_SSH_PRIVATE_KEY = "ssh_private_key"
 CONF_TOKEN = "token"
 CONF_VERIFY_SSL = "verify_ssl"
 

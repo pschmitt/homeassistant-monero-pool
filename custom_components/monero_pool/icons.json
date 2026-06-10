@@ -1,0 +1,19 @@
+{
+  "integration": "mdi:pickaxe",
+  "entity": {
+    "sensor": {
+      "hash_rate": { "default": "mdi:speedometer" },
+      "miners": { "default": "mdi:pickaxe" },
+      "workers": { "default": "mdi:account-hard-hat" },
+      "confirmed_balance": { "default": "mdi:wallet" },
+      "payout_progress": { "default": "mdi:progress-check" },
+      "total_paid": { "default": "mdi:cash-multiple" },
+      "payout_threshold": { "default": "mdi:cash-lock" },
+      "hashrate_1m": { "default": "mdi:speedometer" },
+      "hashrate_10m": { "default": "mdi:speedometer-medium" },
+      "hashrate_1h": { "default": "mdi:speedometer-slow" },
+      "accepted": { "default": "mdi:check-circle-outline" },
+      "rejected": { "default": "mdi:close-circle-outline" }
+    }
+  }
+}

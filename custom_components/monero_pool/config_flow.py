@@ -26,6 +26,8 @@ from .const import (
     CONF_API_URL,
     CONF_MODE,
     CONF_SSH_HOST,
+    CONF_SSH_KNOWN_HOSTS,
+    CONF_SSH_PRIVATE_KEY,
     CONF_TOKEN,
     CONF_VERIFY_SSL,
     CONF_WALLET,
@@ -96,6 +98,12 @@ def xmrig_proxy_schema(
                 default=defaults.get(CONF_URL, DEFAULT_XMRIG_PROXY_URL),
             ): TextSelector(),
             vol.Optional(CONF_SSH_HOST, default=defaults.get(CONF_SSH_HOST, "")): TextSelector(),
+            vol.Optional(CONF_SSH_KNOWN_HOSTS): TextSelector(
+                TextSelectorConfig(multiline=True)
+            ),
+            vol.Optional(CONF_SSH_PRIVATE_KEY): TextSelector(
+                TextSelectorConfig(multiline=True)
+            ),
             token_marker: TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
             vol.Optional(
                 CONF_NAME,
@@ -181,6 +189,8 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_MODE: MODE_XMRIG_PROXY,
                 CONF_URL: normalize_url(user_input[CONF_URL]),
                 CONF_SSH_HOST: user_input.get(CONF_SSH_HOST, "").strip(),
+                CONF_SSH_KNOWN_HOSTS: user_input.get(CONF_SSH_KNOWN_HOSTS, ""),
+                CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY, ""),
                 CONF_TOKEN: user_input.get(CONF_TOKEN, ""),
                 CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
             }
@@ -269,6 +279,8 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 **entry.data,
                 CONF_URL: normalize_url(user_input[CONF_URL]),
                 CONF_SSH_HOST: user_input.get(CONF_SSH_HOST, "").strip(),
+                CONF_SSH_KNOWN_HOSTS: user_input.get(CONF_SSH_KNOWN_HOSTS, ""),
+                CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY) or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
                 CONF_TOKEN: user_input.get(CONF_TOKEN) or entry.data.get(CONF_TOKEN, ""),
                 CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
             }

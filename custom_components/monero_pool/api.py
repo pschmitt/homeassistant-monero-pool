@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -250,6 +252,8 @@ class XmrigProxyClient:
         url: str,
         token: str = "",
         ssh_host: str = "",
+        ssh_known_hosts: str = "",
+        ssh_private_key: str = "",
         request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
     ) -> None:
         """Initialize the client."""
@@ -257,6 +261,8 @@ class XmrigProxyClient:
         self._session = session
         self._token = token
         self._ssh_host = ssh_host.strip()
+        self._ssh_known_hosts = ssh_known_hosts.strip()
+        self._ssh_private_key = ssh_private_key.strip()
         self._request_timeout = request_timeout
 
     @property
@@ -301,6 +307,27 @@ class XmrigProxyClient:
 
     async def _async_fetch_data_via_ssh(self) -> Mapping[str, Any]:
         """Fetch XMRig proxy stats by running curl on a remote host via SSH."""
+        known_hosts_tmp: str | None = None
+        identity_tmp: str | None = None
+
+        if self._ssh_known_hosts:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".known_hosts", delete=False
+            ) as f:
+                f.write(self._ssh_known_hosts)
+                known_hosts_tmp = f.name
+
+        if self._ssh_private_key:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".pem", delete=False
+            ) as f:
+                f.write(self._ssh_private_key)
+                # SSH requires strict permissions on private key files
+                os.chmod(f.name, 0o600)
+                identity_tmp = f.name
+
+        known_hosts_file = known_hosts_tmp or "/config/.ssh/known_hosts"
+
         command = [
             "ssh",
             "-o",
@@ -308,7 +335,11 @@ class XmrigProxyClient:
             "-o",
             "ConnectTimeout=10",
             "-o",
-            "UserKnownHostsFile=/config/.ssh/known_hosts",
+            f"UserKnownHostsFile={known_hosts_file}",
+        ]
+        if identity_tmp:
+            command.extend(["-o", "IdentitiesOnly=yes", "-i", identity_tmp])
+        command += [
             self._ssh_host,
             "--",
             "curl",
@@ -330,6 +361,11 @@ class XmrigProxyClient:
                 stdout, stderr = await process.communicate()
         except (OSError, TimeoutError) as err:
             raise MoneroPoolConnectionError("Failed to fetch XMRig proxy stats via SSH") from err
+        finally:
+            if known_hosts_tmp:
+                os.unlink(known_hosts_tmp)
+            if identity_tmp:
+                os.unlink(identity_tmp)
 
         if process.returncode != 0:
             message = stderr.decode(errors="replace").strip()
