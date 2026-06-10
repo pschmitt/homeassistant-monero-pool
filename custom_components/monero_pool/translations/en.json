@@ -45,6 +45,21 @@
           "name": "Name",
           "verify_ssl": "Verify SSL certificate"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Monero stats source",
+        "description": "The credentials for **{name}** were rejected. Re-enter them. Leave the token/key empty to keep the current one.",
+        "data": {
+          "wallet": "Wallet address",
+          "api_url": "API URL",
+          "url": "Workers endpoint URL",
+          "ssh_host": "SSH host (user@host)",
+          "ssh_known_hosts": "SSH host keys (known_hosts format)",
+          "ssh_private_key": "SSH private key (leave empty to keep the current key)",
+          "token": "API token",
+          "name": "Name",
+          "verify_ssl": "Verify SSL certificate"
+        }
       }
     },
     "error": {
@@ -54,7 +69,8 @@
     },
     "abort": {
       "already_configured": "This Monero stats source is already configured.",
-      "reconfigure_successful": "Configuration updated."
+      "reconfigure_successful": "Configuration updated.",
+      "reauth_successful": "Re-authentication successful."
     }
   },
   "options": {

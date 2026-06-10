@@ -230,6 +230,72 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self._async_reconfigure_hashvault(entry, user_input)
         return await self._async_reconfigure_xmrig_proxy(entry, user_input)
 
+    async def async_step_reauth(
+        self,
+        entry_data: dict[str, Any],
+    ) -> ConfigFlowResult:
+        """Handle re-authentication when the source rejects credentials."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
+        """Prompt for fresh credentials (mode-appropriate) and validate them."""
+        entry = self._get_reauth_entry()
+        mode = entry.data[CONF_MODE]
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            if mode == MODE_HASHVAULT:
+                data = {
+                    **entry.data,
+                    CONF_WALLET: user_input[CONF_WALLET].strip(),
+                    CONF_API_URL: normalize_url(user_input[CONF_API_URL]),
+                    CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
+                }
+            else:
+                data = {
+                    **entry.data,
+                    CONF_URL: normalize_url(user_input[CONF_URL]),
+                    CONF_SSH_HOST: user_input.get(CONF_SSH_HOST, "").strip(),
+                    CONF_SSH_KNOWN_HOSTS: user_input.get(CONF_SSH_KNOWN_HOSTS)
+                    or entry.data.get(CONF_SSH_KNOWN_HOSTS, ""),
+                    CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY)
+                    or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
+                    CONF_TOKEN: user_input.get(CONF_TOKEN)
+                    or entry.data.get(CONF_TOKEN, ""),
+                    CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
+                }
+            try:
+                info = await validate_input(self.hass, data)
+            except MoneroPoolAuthError:
+                errors["base"] = "invalid_auth"
+            except MoneroPoolConnectionError:
+                errors["base"] = "cannot_connect"
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Unexpected exception during Monero Pool reauth")
+                errors["base"] = "unknown"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data=data,
+                    unique_id=info["unique_id"],
+                )
+
+        defaults = {**entry.data, CONF_NAME: entry.title}
+        schema = (
+            hashvault_schema(defaults)
+            if mode == MODE_HASHVAULT
+            else xmrig_proxy_schema(defaults)
+        )
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"name": entry.title},
+        )
+
     async def _async_reconfigure_hashvault(
         self,
         entry: ConfigEntry,
