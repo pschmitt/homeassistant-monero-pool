@@ -12,6 +12,7 @@
   "loggers": [
     "custom_components.monero_pool"
   ],
+  "requirements": ["asyncssh>=2.14.0"],
   "version": "0.1.0"
 }
 

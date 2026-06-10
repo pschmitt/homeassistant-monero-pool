@@ -198,7 +198,8 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 info = await validate_input(self.hass, data)
             except MoneroPoolAuthError:
                 errors["base"] = "invalid_auth"
-            except MoneroPoolConnectionError:
+            except MoneroPoolConnectionError as err:
+                _LOGGER.warning("XMRig proxy connection error: %s", err)
                 errors["base"] = "cannot_connect"
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("Unexpected exception while validating XMRig proxy config")

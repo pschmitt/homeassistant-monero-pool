@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import glob
 import json
+import logging
 import os
+import shlex
 import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -15,6 +18,8 @@ from aiohttp import ClientError, ClientResponseError, ClientSession
 
 from .const import DEFAULT_REQUEST_TIMEOUT, PICOMONERO
 from .exceptions import MoneroPoolAuthError, MoneroPoolConnectionError
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def normalize_url(url: str) -> str:
@@ -306,76 +311,106 @@ class XmrigProxyClient:
         return self._normalize(payload)
 
     async def _async_fetch_data_via_ssh(self) -> Mapping[str, Any]:
-        """Fetch XMRig proxy stats by running curl on a remote host via SSH."""
-        known_hosts_tmp: str | None = None
-        identity_tmp: str | None = None
+        """Fetch XMRig proxy stats via asyncssh by running curl on the remote host."""
+        try:
+            import asyncssh  # noqa: PLC0415
+        except ImportError as err:
+            raise MoneroPoolConnectionError(
+                "asyncssh is required for SSH connectivity"
+            ) from err
 
+        known_hosts_tmp: str | None = None
+
+        # Build known_hosts: prefer inline config, fall back to discovered files
         if self._ssh_known_hosts:
             with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".known_hosts", delete=False
             ) as f:
                 f.write(self._ssh_known_hosts)
                 known_hosts_tmp = f.name
+            known_hosts: str | list[str] | None = known_hosts_tmp
+        else:
+            known_hosts = [
+                p
+                for p in (
+                    "/root/.ssh/known_hosts",
+                    "/config/.ssh/known_hosts",
+                    "/config/.config/ssh/known_hosts",
+                )
+                if os.path.isfile(p)
+            ] or None
 
+        # Build client_keys: use provided key or auto-discover identity files
         if self._ssh_private_key:
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".pem", delete=False
-            ) as f:
-                f.write(self._ssh_private_key)
-                # SSH requires strict permissions on private key files
-                os.chmod(f.name, 0o600)
-                identity_tmp = f.name
+            try:
+                client_keys: Any = [asyncssh.import_private_key(self._ssh_private_key)]
+            except asyncssh.KeyImportError as err:
+                raise MoneroPoolAuthError(f"Invalid SSH private key: {err}") from err
+        else:
+            discovered: list[str] = []
+            for pattern in (
+                "/root/.ssh/id_*",
+                "/config/.ssh/id_*",
+                "/config/.config/ssh/id_*",
+            ):
+                discovered.extend(
+                    p
+                    for p in sorted(glob.glob(pattern))
+                    if not p.endswith(".pub") and os.path.isfile(p)
+                )
+            client_keys = discovered or None
 
-        known_hosts_file = known_hosts_tmp or "/config/.ssh/known_hosts"
+        # Parse user@host
+        if "@" in self._ssh_host:
+            username, hostname = self._ssh_host.split("@", 1)
+        else:
+            username = None
+            hostname = self._ssh_host
 
-        command = [
-            "ssh",
-            "-o",
-            "BatchMode=yes",
-            "-o",
-            "ConnectTimeout=10",
-            "-o",
-            f"UserKnownHostsFile={known_hosts_file}",
-        ]
-        if identity_tmp:
-            command.extend(["-o", "IdentitiesOnly=yes", "-i", identity_tmp])
-        command += [
-            self._ssh_host,
-            "--",
-            "curl",
-            "-fsSL",
-            "--max-time",
-            str(self._request_timeout),
-        ]
+        # Build the remote curl command
+        cmd_parts = ["curl", "-fsSL", "--max-time", str(self._request_timeout)]
         if self._token:
-            command.extend(["-H", f"Authorization: Bearer {self._token}"])
-        command.append(self.url)
+            cmd_parts.extend(["-H", f"Authorization: Bearer {self._token}"])
+        cmd_parts.append(self.url)
+        cmd = shlex.join(cmd_parts)
+
+        connect_kwargs: dict[str, Any] = {
+            "known_hosts": known_hosts,
+            "client_keys": client_keys,
+        }
+        if username:
+            connect_kwargs["username"] = username
+
+        _LOGGER.debug(
+            "SSH connecting to %s as %s (known_hosts=%s, client_keys=%s)",
+            hostname, username, known_hosts, client_keys,
+        )
 
         try:
             async with asyncio.timeout(self._request_timeout + 15):
-                process = await asyncio.create_subprocess_exec(
-                    *command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                stdout, stderr = await process.communicate()
+                async with asyncssh.connect(hostname, **connect_kwargs) as conn:
+                    result = await conn.run(cmd)
+        except asyncssh.Error as err:
+            err_str = str(err).lower()
+            if "permission denied" in err_str or "authentication" in err_str:
+                raise MoneroPoolAuthError(f"SSH authentication failed: {err}") from err
+            raise MoneroPoolConnectionError(f"SSH error: {err}") from err
         except (OSError, TimeoutError) as err:
             raise MoneroPoolConnectionError("Failed to fetch XMRig proxy stats via SSH") from err
         finally:
             if known_hosts_tmp:
                 os.unlink(known_hosts_tmp)
-            if identity_tmp:
-                os.unlink(identity_tmp)
 
-        if process.returncode != 0:
-            message = stderr.decode(errors="replace").strip()
+        if result.exit_status != 0:
+            msg = (result.stderr or "").strip()
+            _LOGGER.warning("SSH fetch failed (exit %d): %s", result.exit_status, msg)
             raise MoneroPoolConnectionError(
-                f"XMRig proxy SSH fetch failed: {message or process.returncode}"
+                f"XMRig proxy SSH fetch failed: {msg or result.exit_status}"
             )
 
         try:
-            payload = json.loads(stdout.decode())
-        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            payload = json.loads(result.stdout)
+        except (json.JSONDecodeError, ValueError) as err:
             raise MoneroPoolConnectionError("Unexpected XMRig proxy SSH response") from err
 
         if not isinstance(payload, Mapping):
