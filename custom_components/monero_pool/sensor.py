@@ -332,8 +332,13 @@ class HashvaultEtaSensor(MoneroPoolEntity, SensorEntity):
         d = int(total_s // 86400)
         h = int((total_s % 86400) // 3600)
         m = int((total_s % 3600) // 60)
-        parts = ([f"{d}d"] if d else []) + [f"{h}h", f"{m}min"]
-        return {"time_remaining": " ".join(parts)}
+        if d:
+            label = f"{d}d"
+        elif h:
+            label = f"{h}h"
+        else:
+            label = f"{m}min"
+        return {"time_remaining": label}
 
 
 class HashvaultWorkerHashrateSensor(MoneroPoolEntity, SensorEntity):
