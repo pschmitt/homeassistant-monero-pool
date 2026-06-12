@@ -109,6 +109,15 @@
       "last_withdrawal": {
         "name": "Last Withdrawal"
       },
+      "daily_credited": {
+        "name": "Daily Credited"
+      },
+      "next_payout_eta": {
+        "name": "Next Payout ETA"
+      },
+      "avg24_hash_rate": {
+        "name": "Avg 24h Hashrate"
+      },
       "hashrate_1m": {
         "name": "Hashrate 1m"
       },

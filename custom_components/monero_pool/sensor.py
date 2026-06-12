@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -94,6 +94,24 @@ HASHVAULT_DESCRIPTIONS: tuple[MoneroPoolSensorDescription, ...] = (
         value_attr="payout_threshold",
     ),
     MoneroPoolSensorDescription(
+        key="daily_credited",
+        translation_key="daily_credited",
+        icon="mdi:calendar-today",
+        native_unit_of_measurement="XMR",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=6,
+        value_attr="daily_credited",
+    ),
+    MoneroPoolSensorDescription(
+        key="avg24_hash_rate",
+        translation_key="avg24_hash_rate",
+        icon="mdi:speedometer-medium",
+        native_unit_of_measurement=HASHRATE_UNIT,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_attr="avg24_hash_rate",
+    ),
+    MoneroPoolSensorDescription(
         key="last_withdrawal",
         translation_key="last_withdrawal",
         device_class=SensorDeviceClass.TIMESTAMP,
@@ -167,12 +185,13 @@ async def async_setup_entry(
     aggregate_descriptions = (
         HASHVAULT_DESCRIPTIONS if mode == MODE_HASHVAULT else XMRIG_PROXY_DESCRIPTIONS
     )
-    async_add_entities(
-        [
-            MoneroPoolAggregateSensor(coordinator, description)
-            for description in aggregate_descriptions
-        ]
-    )
+    entities: list[SensorEntity] = [
+        MoneroPoolAggregateSensor(coordinator, description)
+        for description in aggregate_descriptions
+    ]
+    if mode == MODE_HASHVAULT:
+        entities.append(HashvaultEtaSensor(coordinator))
+    async_add_entities(entities)
 
     known_workers: set[str] = set()
 
@@ -252,6 +271,69 @@ class MoneroPoolAggregateSensor(MoneroPoolEntity, SensorEntity):
                 }
             )
         return attrs
+
+
+class HashvaultEtaSensor(MoneroPoolEntity, SensorEntity):
+    """Estimated next payout timestamp for a Hashvault wallet."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:cash-clock"
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator: MoneroPoolCoordinator) -> None:
+        """Initialize the ETA sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}:next_payout_eta"
+        self._attr_name = "Next Payout ETA"
+        self.entity_id = suggest_entity_id("sensor", coordinator, "next payout eta")
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return estimated next payout datetime."""
+        data = self.coordinator.data
+        if not isinstance(data, HashvaultStats):
+            return None
+
+        now = datetime.now(tz=UTC)
+
+        # Hashrate-adjusted estimate using pool's daily credited rate
+        if (
+            data.daily_credited
+            and data.daily_credited > 0
+            and data.avg24_hash_rate
+            and data.avg24_hash_rate > 0
+            and data.hash_rate
+            and data.hash_rate > 0
+            and data.payout_threshold
+            and data.confirmed_balance is not None
+        ):
+            projected_daily = data.daily_credited * (data.hash_rate / data.avg24_hash_rate)
+            remaining = data.payout_threshold - data.confirmed_balance
+            if projected_daily > 0 and remaining > 0:
+                return now + timedelta(seconds=(remaining / projected_daily) * 86400)
+
+        # Fallback: linear extrapolation from last payout
+        if data.last_withdrawal and data.payout_progress and data.payout_progress > 0:
+            last_dt = datetime.fromtimestamp(data.last_withdrawal / 1000, tz=UTC)
+            elapsed_s = (now - last_dt).total_seconds()
+            if elapsed_s > 0:
+                eta_s = ((100 - data.payout_progress) / data.payout_progress) * elapsed_s
+                return now + timedelta(seconds=eta_s)
+
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return human-readable time remaining."""
+        eta = self.native_value
+        if eta is None:
+            return {}
+        total_s = max(0.0, (eta - datetime.now(tz=UTC)).total_seconds())
+        d = int(total_s // 86400)
+        h = int((total_s % 86400) // 3600)
+        m = int((total_s % 3600) // 60)
+        parts = ([f"{d}d"] if d else []) + [f"{h}h", f"{m}min"]
+        return {"time_remaining": " ".join(parts)}
 
 
 class HashvaultWorkerHashrateSensor(MoneroPoolEntity, SensorEntity):

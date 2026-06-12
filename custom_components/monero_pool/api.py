@@ -84,11 +84,13 @@ class HashvaultStats:
     wallet: str
     server_name: str
     hash_rate: float | None
+    avg24_hash_rate: float | None
     miners: int
     workers_count: int
     confirmed_balance: float | None
     payout_threshold: float | None
     payout_progress: float | None
+    daily_credited: float | None
     total_paid: float | None
     last_withdrawal: int | None
     workers: dict[str, HashvaultWorker]
@@ -234,11 +236,13 @@ class HashvaultClient:
             wallet=self.wallet,
             server_name=self.server_name,
             hash_rate=_as_float(collective.get("hashRate") or collective.get("hashrate")),
+            avg24_hash_rate=_as_float(collective.get("avg24hashRate")),
             miners=miners,
             workers_count=len(workers),
             confirmed_balance=confirmed_balance,
             payout_threshold=payout_threshold,
             payout_progress=payout_progress,
+            daily_credited=_xmr_from_atomic(revenue.get("dailyCredited")),
             total_paid=_xmr_from_atomic(revenue.get("totalPaid")),
             last_withdrawal=_as_int(revenue.get("lastWithdrawal")),
             workers=workers,
