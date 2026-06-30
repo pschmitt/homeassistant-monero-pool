@@ -148,25 +148,25 @@
         "name": "Rejected Shares"
       },
       "local_hashrate_15m": {
-        "name": "Local Hashrate 15m"
+        "name": "Hashrate 15m"
       },
       "local_hashrate_1h": {
-        "name": "Local Hashrate 1h"
+        "name": "Hashrate 1h"
       },
       "local_hashrate_24h": {
-        "name": "Local Hashrate 24h"
+        "name": "Hashrate 24h"
       },
       "local_connections": {
-        "name": "Local Workers"
+        "name": "Workers"
       },
       "local_total_shares": {
-        "name": "Local Shares"
+        "name": "Shares"
       },
       "local_shares_found": {
-        "name": "Local Shares Found"
+        "name": "Shares Found"
       },
       "local_shares_failed": {
-        "name": "Local Shares Failed"
+        "name": "Shares Failed"
       },
       "local_last_share_found": {
         "name": "Last Share Found"
