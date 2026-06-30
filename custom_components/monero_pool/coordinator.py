@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import HashvaultClient, MoneroPoolData, XmrigProxyClient
+from .api import HashvaultClient, MoneroPoolData, P2poolClient, XmrigProxyClient
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 from .exceptions import MoneroPoolAuthError, MoneroPoolConnectionError
 
@@ -24,7 +24,7 @@ class MoneroPoolCoordinator(DataUpdateCoordinator[MoneroPoolData]):
     def __init__(
         self,
         hass: HomeAssistant,
-        client: HashvaultClient | XmrigProxyClient,
+        client: HashvaultClient | P2poolClient | XmrigProxyClient,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the coordinator."""
@@ -47,4 +47,3 @@ class MoneroPoolCoordinator(DataUpdateCoordinator[MoneroPoolData]):
             raise ConfigEntryAuthFailed from err
         except MoneroPoolConnectionError as err:
             raise UpdateFailed(str(err)) from err
-

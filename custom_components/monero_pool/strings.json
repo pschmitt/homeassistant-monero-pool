@@ -5,7 +5,8 @@
         "title": "Add Monero stats source",
         "menu_options": {
           "hashvault": "Hashvault.pro wallet",
-          "xmrig_proxy": "XMRig proxy"
+          "xmrig_proxy": "XMRig proxy",
+          "p2pool": "p2pool"
         }
       },
       "hashvault": {
@@ -23,6 +24,19 @@
         "description": "Connect Home Assistant to the XMRig proxy /1/workers endpoint.",
         "data": {
           "url": "Workers endpoint URL",
+          "ssh_host": "SSH host (user@host)",
+          "ssh_known_hosts": "SSH host keys (known_hosts format)",
+          "ssh_private_key": "SSH private key (leave empty to use the HA default key)",
+          "token": "API token",
+          "name": "Name",
+          "verify_ssl": "Verify SSL certificate"
+        }
+      },
+      "p2pool": {
+        "title": "Add p2pool",
+        "description": "Connect Home Assistant to a p2pool data-api endpoint.",
+        "data": {
+          "url": "p2pool API base URL",
           "ssh_host": "SSH host (user@host)",
           "ssh_known_hosts": "SSH host keys (known_hosts format)",
           "ssh_private_key": "SSH private key (leave empty to use the HA default key)",
@@ -132,6 +146,36 @@
       },
       "rejected": {
         "name": "Rejected Shares"
+      },
+      "local_hashrate_15m": {
+        "name": "Local Hashrate 15m"
+      },
+      "local_connections": {
+        "name": "Local Workers"
+      },
+      "local_total_shares": {
+        "name": "Local Shares"
+      },
+      "local_shares_found": {
+        "name": "Local Shares Found"
+      },
+      "local_shares_failed": {
+        "name": "Local Shares Failed"
+      },
+      "local_current_effort": {
+        "name": "Current Effort"
+      },
+      "pool_hashrate": {
+        "name": "Pool Hashrate"
+      },
+      "pool_miners": {
+        "name": "Pool Miners"
+      },
+      "sidechain_height": {
+        "name": "Sidechain Height"
+      },
+      "p2p_connections": {
+        "name": "P2P Connections"
       }
     }
   }

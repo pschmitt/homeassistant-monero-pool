@@ -130,7 +130,52 @@ class XmrigProxyStats:
     raw: dict[str, Any] = field(default_factory=dict)
 
 
-MoneroPoolData = HashvaultStats | XmrigProxyStats
+@dataclass(slots=True, frozen=True)
+class P2poolWorker:
+    """Normalized p2pool local stratum worker stats."""
+
+    worker_id: str
+    name: str
+    endpoint: str
+    shares: int | None
+    difficulty: int | None
+    last_share_seconds: int | None
+    raw: str = ""
+
+
+@dataclass(slots=True, frozen=True)
+class P2poolStats:
+    """Normalized p2pool data-api stats."""
+
+    server_name: str
+    network_height: int | None
+    network_difficulty: int | None
+    network_reward: float | None
+    sidechain_height: int | None
+    sidechain_difficulty: int | None
+    pool_hashrate: float | None
+    pool_miners: int | None
+    pool_total_hashes: int | None
+    local_hashrate_15m: float | None
+    local_hashrate_1h: float | None
+    local_hashrate_24h: float | None
+    local_total_hashes: int | None
+    local_total_shares: int | None
+    local_shares_found: int | None
+    local_shares_failed: int | None
+    local_current_effort: float | None
+    local_average_effort: float | None
+    local_connections: int | None
+    p2p_connections: int | None
+    p2p_incoming_connections: int | None
+    p2p_peer_list_size: int | None
+    p2p_uptime: int | None
+    workers_count: int
+    workers: dict[str, P2poolWorker]
+    raw: dict[str, Any] = field(default_factory=dict)
+
+
+MoneroPoolData = HashvaultStats | XmrigProxyStats | P2poolStats
 
 
 class HashvaultClient:
@@ -475,5 +520,260 @@ class XmrigProxyClient:
             hashrate_12h=_safe_rate(rates, 3),
             hashrate_24h=_safe_rate(rates, 4),
             hashrate_lifetime=_safe_rate(rates, 5),
+            raw=raw,
+        )
+
+
+class SshJsonFetcher:
+    """Mixin for fetching JSON endpoints either directly or over SSH."""
+
+    url: str
+    _session: ClientSession
+    _token: str
+    _ssh_host: str
+    _ssh_known_hosts: str
+    _ssh_private_key: str
+    _request_timeout: int
+
+    async def _async_request_json(self, url: str) -> Any:
+        """Fetch JSON from a URL, optionally via SSH."""
+        if self._ssh_host:
+            return await self._async_fetch_json_via_ssh(url)
+
+        headers = {}
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+        try:
+            async with asyncio.timeout(self._request_timeout):
+                response = await self._session.get(url, headers=headers)
+                response.raise_for_status()
+                return await response.json(content_type=None)
+        except ClientResponseError as err:
+            if err.status in {401, 403}:
+                raise MoneroPoolAuthError("HTTP source rejected the request") from err
+            raise MoneroPoolConnectionError(f"HTTP error {err.status}") from err
+        except (ClientError, TimeoutError, ValueError) as err:
+            raise MoneroPoolConnectionError("Failed to fetch HTTP source stats") from err
+
+    async def _async_fetch_json_via_ssh(self, url: str) -> Any:
+        """Fetch JSON by running curl on the remote SSH host."""
+        if self._ssh_known_hosts:
+            try:
+                known_hosts: Any = asyncssh.import_known_hosts(
+                    self._ssh_known_hosts + "\n"
+                )
+            except (ValueError, asyncssh.Error) as err:
+                raise MoneroPoolConnectionError(
+                    f"Invalid SSH known_hosts data: {err}"
+                ) from err
+        else:
+            known_hosts = [
+                p
+                for p in (
+                    "/root/.ssh/known_hosts",
+                    "/config/.ssh/known_hosts",
+                    "/config/.config/ssh/known_hosts",
+                )
+                if os.path.isfile(p)
+            ] or None
+
+        if self._ssh_private_key:
+            try:
+                client_keys: Any = [
+                    asyncssh.import_private_key(self._ssh_private_key + "\n")
+                ]
+            except asyncssh.KeyImportError as err:
+                raise MoneroPoolAuthError(f"Invalid SSH private key: {err}") from err
+        else:
+            discovered: list[str] = []
+            for pattern in (
+                "/root/.ssh/id_*",
+                "/config/.ssh/id_*",
+                "/config/.config/ssh/id_*",
+            ):
+                discovered.extend(
+                    p
+                    for p in sorted(glob.glob(pattern))
+                    if not p.endswith(".pub") and os.path.isfile(p)
+                )
+            client_keys = discovered or None
+
+        if "@" in self._ssh_host:
+            username, hostname = self._ssh_host.split("@", 1)
+        else:
+            username = None
+            hostname = self._ssh_host
+
+        cmd_parts = ["curl", "-fsSL", "--max-time", str(self._request_timeout)]
+        if self._token:
+            cmd_parts.extend(["-H", f"Authorization: Bearer {self._token}"])
+        cmd_parts.append(url)
+        cmd = shlex.join(cmd_parts)
+
+        connect_kwargs: dict[str, Any] = {
+            "known_hosts": known_hosts,
+            "client_keys": client_keys,
+        }
+        if username:
+            connect_kwargs["username"] = username
+
+        _LOGGER.debug(
+            "SSH connecting to %s as %s (known_hosts=%s, client_keys=%s)",
+            hostname, username, known_hosts, client_keys,
+        )
+
+        try:
+            async with asyncio.timeout(self._request_timeout + 15):
+                async with asyncssh.connect(hostname, **connect_kwargs) as conn:
+                    result = await conn.run(cmd)
+        except asyncssh.Error as err:
+            err_str = str(err).lower()
+            if "permission denied" in err_str or "authentication" in err_str:
+                raise MoneroPoolAuthError(f"SSH authentication failed: {err}") from err
+            raise MoneroPoolConnectionError(f"SSH error: {err}") from err
+        except (OSError, TimeoutError) as err:
+            raise MoneroPoolConnectionError("Failed to fetch stats via SSH") from err
+
+        if result.exit_status != 0:
+            msg = (result.stderr or "").strip()
+            _LOGGER.debug("SSH fetch failed (exit %d): %s", result.exit_status, msg)
+            raise MoneroPoolConnectionError(
+                f"SSH fetch failed: {msg or result.exit_status}"
+            )
+
+        try:
+            return json.loads(result.stdout)
+        except (json.JSONDecodeError, ValueError) as err:
+            raise MoneroPoolConnectionError("Unexpected SSH response") from err
+
+
+class P2poolClient(SshJsonFetcher):
+    """Client for p2pool data-api stats."""
+
+    manufacturer = "p2pool"
+
+    def __init__(
+        self,
+        session: ClientSession,
+        url: str,
+        token: str = "",
+        ssh_host: str = "",
+        ssh_known_hosts: str = "",
+        ssh_private_key: str = "",
+        request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+    ) -> None:
+        """Initialize the client."""
+        self.url = normalize_url(url)
+        self._session = session
+        self._token = token
+        self._ssh_host = ssh_host.strip()
+        self._ssh_known_hosts = ssh_known_hosts.strip()
+        self._ssh_private_key = ssh_private_key.strip()
+        self._request_timeout = request_timeout
+
+    @property
+    def server_name(self) -> str:
+        """Return a friendly server name."""
+        parsed = urlparse(self.url)
+        return parsed.hostname or self.url
+
+    async def async_close(self) -> None:
+        """Close the underlying session."""
+        await self._session.close()
+
+    async def async_validate(self) -> P2poolStats:
+        """Validate by fetching one stats payload."""
+        return await self.async_fetch_data()
+
+    async def async_fetch_data(self) -> P2poolStats:
+        """Fetch and normalize p2pool stats."""
+        network, pool, stratum, p2p = await asyncio.gather(
+            self._async_request_endpoint("/network/stats"),
+            self._async_request_endpoint("/pool/stats"),
+            self._async_request_endpoint("/local/stratum"),
+            self._async_request_endpoint("/local/p2p"),
+        )
+        for payload in (network, pool, stratum, p2p):
+            if not isinstance(payload, Mapping):
+                raise MoneroPoolConnectionError("Unexpected p2pool response")
+        return self._normalize(network, pool, stratum, p2p)
+
+    async def _async_request_endpoint(self, endpoint: str) -> Any:
+        """Request one JSON document from p2pool data-api."""
+        url = f"{self.url}/{endpoint.lstrip('/')}"
+        try:
+            return await self._async_request_json(url)
+        except MoneroPoolConnectionError as err:
+            raise MoneroPoolConnectionError("Failed to fetch p2pool stats") from err
+
+    def _normalize(
+        self,
+        network: Mapping[str, Any],
+        pool: Mapping[str, Any],
+        stratum: Mapping[str, Any],
+        p2p: Mapping[str, Any],
+    ) -> P2poolStats:
+        """Normalize p2pool data-api payloads."""
+        pool_statistics = pool.get("pool_statistics")
+        if not isinstance(pool_statistics, Mapping):
+            pool_statistics = {}
+
+        workers_payload = stratum.get("workers")
+        if not isinstance(workers_payload, list):
+            workers_payload = []
+        workers: dict[str, P2poolWorker] = {}
+        for index, worker in enumerate(workers_payload):
+            normalized = self._normalize_worker(worker, index)
+            workers[normalized.worker_id] = normalized
+
+        return P2poolStats(
+            server_name=self.server_name,
+            network_height=_as_int(network.get("height")),
+            network_difficulty=_as_int(network.get("difficulty")),
+            network_reward=_xmr_from_atomic(network.get("reward")),
+            sidechain_height=_as_int(pool_statistics.get("sidechainHeight")),
+            sidechain_difficulty=_as_int(pool_statistics.get("sidechainDifficulty")),
+            pool_hashrate=_as_float(pool_statistics.get("hashRate")),
+            pool_miners=_as_int(pool_statistics.get("miners")),
+            pool_total_hashes=_as_int(pool_statistics.get("totalHashes")),
+            local_hashrate_15m=_as_float(stratum.get("hashrate_15m")),
+            local_hashrate_1h=_as_float(stratum.get("hashrate_1h")),
+            local_hashrate_24h=_as_float(stratum.get("hashrate_24h")),
+            local_total_hashes=_as_int(stratum.get("total_hashes")),
+            local_total_shares=_as_int(stratum.get("total_stratum_shares")),
+            local_shares_found=_as_int(stratum.get("shares_found")),
+            local_shares_failed=_as_int(stratum.get("shares_failed")),
+            local_current_effort=_as_float(stratum.get("current_effort")),
+            local_average_effort=_as_float(stratum.get("average_effort")),
+            local_connections=_as_int(stratum.get("connections")),
+            p2p_connections=_as_int(p2p.get("connections")),
+            p2p_incoming_connections=_as_int(p2p.get("incoming_connections")),
+            p2p_peer_list_size=_as_int(p2p.get("peer_list_size")),
+            p2p_uptime=_as_int(p2p.get("uptime")),
+            workers_count=len(workers),
+            workers=workers,
+            raw={
+                "network": dict(network),
+                "pool": dict(pool),
+                "stratum": dict(stratum),
+                "p2p": dict(p2p),
+            },
+        )
+
+    @staticmethod
+    def _normalize_worker(worker: Any, index: int) -> P2poolWorker:
+        """Normalize one p2pool stratum worker record."""
+        raw = str(worker)
+        parts = raw.split(",")
+        endpoint = parts[0] if parts else ""
+        name = parts[4] if len(parts) > 4 and parts[4] else f"worker_{index + 1}"
+        worker_id = name.lower()
+        return P2poolWorker(
+            worker_id=worker_id,
+            name=name,
+            endpoint=endpoint,
+            shares=_as_int(parts[1] if len(parts) > 1 else None),
+            difficulty=_as_int(parts[2] if len(parts) > 2 else None),
+            last_share_seconds=_as_int(parts[3] if len(parts) > 3 else None),
             raw=raw,
         )

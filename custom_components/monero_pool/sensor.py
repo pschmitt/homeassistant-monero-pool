@@ -18,8 +18,15 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .api import HashvaultStats, HashvaultWorker, XmrigProxyStats, XmrigWorker
-from .const import DOMAIN, MODE_HASHVAULT, MODE_XMRIG_PROXY
+from .api import (
+    HashvaultStats,
+    HashvaultWorker,
+    P2poolStats,
+    P2poolWorker,
+    XmrigProxyStats,
+    XmrigWorker,
+)
+from .const import DOMAIN, MODE_HASHVAULT, MODE_P2POOL, MODE_XMRIG_PROXY
 from .coordinator import MoneroPoolCoordinator
 from .entity import MoneroPoolEntity, suggest_entity_id
 
@@ -171,6 +178,87 @@ XMRIG_PROXY_DESCRIPTIONS: tuple[MoneroPoolSensorDescription, ...] = (
     ),
 )
 
+P2POOL_DESCRIPTIONS: tuple[MoneroPoolSensorDescription, ...] = (
+    MoneroPoolSensorDescription(
+        key="local_hashrate_15m",
+        translation_key="local_hashrate_15m",
+        icon="mdi:speedometer",
+        native_unit_of_measurement=HASHRATE_UNIT,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_attr="local_hashrate_15m",
+    ),
+    MoneroPoolSensorDescription(
+        key="local_connections",
+        translation_key="local_connections",
+        icon="mdi:account-hard-hat",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_attr="local_connections",
+    ),
+    MoneroPoolSensorDescription(
+        key="local_total_shares",
+        translation_key="local_total_shares",
+        icon="mdi:share-variant",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_attr="local_total_shares",
+    ),
+    MoneroPoolSensorDescription(
+        key="local_shares_found",
+        translation_key="local_shares_found",
+        icon="mdi:check-circle-outline",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_attr="local_shares_found",
+    ),
+    MoneroPoolSensorDescription(
+        key="local_shares_failed",
+        translation_key="local_shares_failed",
+        icon="mdi:close-circle-outline",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_attr="local_shares_failed",
+    ),
+    MoneroPoolSensorDescription(
+        key="local_current_effort",
+        translation_key="local_current_effort",
+        icon="mdi:percent-outline",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        value_attr="local_current_effort",
+    ),
+    MoneroPoolSensorDescription(
+        key="pool_hashrate",
+        translation_key="pool_hashrate",
+        icon="mdi:speedometer-medium",
+        native_unit_of_measurement=HASHRATE_UNIT,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_attr="pool_hashrate",
+    ),
+    MoneroPoolSensorDescription(
+        key="pool_miners",
+        translation_key="pool_miners",
+        icon="mdi:pickaxe",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_attr="pool_miners",
+    ),
+    MoneroPoolSensorDescription(
+        key="sidechain_height",
+        translation_key="sidechain_height",
+        icon="mdi:counter",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_attr="sidechain_height",
+    ),
+    MoneroPoolSensorDescription(
+        key="p2p_connections",
+        translation_key="p2p_connections",
+        icon="mdi:lan-connect",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_attr="p2p_connections",
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -182,9 +270,12 @@ async def async_setup_entry(
         "coordinator"
     ]
     mode = config_entry.data["mode"]
-    aggregate_descriptions = (
-        HASHVAULT_DESCRIPTIONS if mode == MODE_HASHVAULT else XMRIG_PROXY_DESCRIPTIONS
-    )
+    if mode == MODE_HASHVAULT:
+        aggregate_descriptions = HASHVAULT_DESCRIPTIONS
+    elif mode == MODE_P2POOL:
+        aggregate_descriptions = P2POOL_DESCRIPTIONS
+    else:
+        aggregate_descriptions = XMRIG_PROXY_DESCRIPTIONS
     entities: list[SensorEntity] = [
         MoneroPoolAggregateSensor(coordinator, description)
         for description in aggregate_descriptions
@@ -211,6 +302,12 @@ async def async_setup_entry(
                     continue
                 known_workers.add(worker_id)
                 new_entities.append(XmrigWorkerHashrateSensor(coordinator, worker))
+        elif isinstance(data, P2poolStats):
+            for worker_id, worker in data.workers.items():
+                if worker_id in known_workers:
+                    continue
+                known_workers.add(worker_id)
+                new_entities.append(P2poolWorkerSharesSensor(coordinator, worker))
 
         if new_entities:
             async_add_entities(new_entities)
@@ -268,6 +365,24 @@ class MoneroPoolAggregateSensor(MoneroPoolEntity, SensorEntity):
                     "hashrate_12h": data.hashrate_12h,
                     "hashrate_24h": data.hashrate_24h,
                     "hashrate_lifetime": data.hashrate_lifetime,
+                }
+            )
+        if isinstance(data, P2poolStats):
+            attrs.update(
+                {
+                    "network_height": data.network_height,
+                    "network_difficulty": data.network_difficulty,
+                    "network_reward": data.network_reward,
+                    "sidechain_difficulty": data.sidechain_difficulty,
+                    "pool_total_hashes": data.pool_total_hashes,
+                    "local_hashrate_1h": data.local_hashrate_1h,
+                    "local_hashrate_24h": data.local_hashrate_24h,
+                    "local_total_hashes": data.local_total_hashes,
+                    "local_average_effort": data.local_average_effort,
+                    "p2p_incoming_connections": data.p2p_incoming_connections,
+                    "p2p_peer_list_size": data.p2p_peer_list_size,
+                    "p2p_uptime": data.p2p_uptime,
+                    "worker_names": [worker.name for worker in data.workers.values()],
                 }
             )
         return attrs
@@ -449,5 +564,59 @@ class XmrigWorkerHashrateSensor(MoneroPoolEntity, SensorEntity):
             "hashrate_12h": worker.hashrate_12h,
             "hashrate_24h": worker.hashrate_24h,
             "hashrate_lifetime": worker.hashrate_lifetime,
+            "raw": worker.raw,
+        }
+
+
+class P2poolWorkerSharesSensor(MoneroPoolEntity, SensorEntity):
+    """p2pool local worker shares sensor."""
+
+    _attr_icon = "mdi:pickaxe"
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _unrecorded_attributes = frozenset({"raw"})
+
+    def __init__(
+        self,
+        coordinator: MoneroPoolCoordinator,
+        worker: P2poolWorker,
+    ) -> None:
+        """Initialize the worker sensor."""
+        super().__init__(coordinator)
+        self._worker_id = worker.worker_id
+        self._attr_unique_id = (
+            f"{coordinator.config_entry.entry_id}:p2pool_worker:{worker.worker_id}:shares"
+        )
+        self._attr_name = f"{worker.name} Shares"
+        self.entity_id = suggest_entity_id("sensor", coordinator, f"{worker.name} shares")
+
+    @property
+    def worker(self) -> P2poolWorker | None:
+        """Return the current worker data."""
+        data = self.coordinator.data
+        if not isinstance(data, P2poolStats):
+            return None
+        return data.workers.get(self._worker_id)
+
+    @property
+    def available(self) -> bool:
+        """Return whether the worker still exists."""
+        return self.coordinator.last_update_success and self.worker is not None
+
+    @property
+    def native_value(self) -> int | None:
+        """Return worker accepted stratum shares."""
+        worker = self.worker
+        return worker.shares if worker else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return p2pool worker attributes."""
+        worker = self.worker
+        if worker is None:
+            return {}
+        return {
+            "endpoint": worker.endpoint,
+            "difficulty": worker.difficulty,
+            "last_share_seconds": worker.last_share_seconds,
             "raw": worker.raw,
         }

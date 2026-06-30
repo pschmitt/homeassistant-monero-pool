@@ -11,7 +11,7 @@ from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .api import HashvaultClient, XmrigProxyClient
+from .api import HashvaultClient, P2poolClient, XmrigProxyClient
 from .const import (
     CONF_API_URL,
     CONF_MODE,
@@ -23,6 +23,7 @@ from .const import (
     CONF_WALLET,
     DOMAIN,
     MODE_HASHVAULT,
+    MODE_P2POOL,
     PLATFORMS,
 )
 from .coordinator import MoneroPoolCoordinator
@@ -31,7 +32,7 @@ from .coordinator import MoneroPoolCoordinator
 def create_client(
     hass: HomeAssistant,
     data: dict[str, Any],
-) -> HashvaultClient | XmrigProxyClient:
+) -> HashvaultClient | P2poolClient | XmrigProxyClient:
     """Create the API client for the configured mode."""
     session = async_create_clientsession(
         hass,
@@ -43,6 +44,15 @@ def create_client(
             session=session,
             api_url=data[CONF_API_URL],
             wallet=data[CONF_WALLET],
+        )
+    if data[CONF_MODE] == MODE_P2POOL:
+        return P2poolClient(
+            session=session,
+            url=data[CONF_URL],
+            token=data.get(CONF_TOKEN, ""),
+            ssh_host=data.get(CONF_SSH_HOST, ""),
+            ssh_known_hosts=data.get(CONF_SSH_KNOWN_HOSTS, ""),
+            ssh_private_key=data.get(CONF_SSH_PRIVATE_KEY, ""),
         )
     return XmrigProxyClient(
         session=session,
