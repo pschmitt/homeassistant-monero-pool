@@ -235,6 +235,13 @@ P2POOL_DESCRIPTIONS: tuple[MoneroPoolSensorDescription, ...] = (
         value_attr="local_shares_failed",
     ),
     MoneroPoolSensorDescription(
+        key="local_last_share_found",
+        translation_key="local_last_share_found",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_attr="local_last_share_found",
+    ),
+    MoneroPoolSensorDescription(
         key="local_current_effort",
         translation_key="local_current_effort",
         icon="mdi:percent-outline",
@@ -258,6 +265,21 @@ P2POOL_DESCRIPTIONS: tuple[MoneroPoolSensorDescription, ...] = (
         icon="mdi:pickaxe",
         state_class=SensorStateClass.MEASUREMENT,
         value_attr="pool_miners",
+    ),
+    MoneroPoolSensorDescription(
+        key="pool_last_block_found_time",
+        translation_key="pool_last_block_found_time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_attr="pool_last_block_found_time",
+    ),
+    MoneroPoolSensorDescription(
+        key="pool_total_blocks_found",
+        translation_key="pool_total_blocks_found",
+        icon="mdi:cube-outline",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_attr="pool_total_blocks_found",
     ),
     MoneroPoolSensorDescription(
         key="sidechain_height",
@@ -367,6 +389,13 @@ class MoneroPoolAggregateSensor(MoneroPoolEntity, SensorEntity):
             if not value:
                 return None
             return datetime.fromtimestamp(value / 1000, tz=UTC)
+        if self.entity_description.key in {
+            "local_last_share_found",
+            "pool_last_block_found_time",
+        }:
+            if not value:
+                return None
+            return datetime.fromtimestamp(value, tz=UTC)
         return value
 
     @property
@@ -393,6 +422,7 @@ class MoneroPoolAggregateSensor(MoneroPoolEntity, SensorEntity):
                     "network_reward": data.network_reward,
                     "sidechain_difficulty": data.sidechain_difficulty,
                     "pool_total_hashes": data.pool_total_hashes,
+                    "pool_last_block_found": data.pool_last_block_found,
                     "local_total_hashes": data.local_total_hashes,
                     "local_average_effort": data.local_average_effort,
                     "p2p_incoming_connections": data.p2p_incoming_connections,

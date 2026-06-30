@@ -168,6 +168,9 @@
       "local_shares_failed": {
         "name": "Local Shares Failed"
       },
+      "local_last_share_found": {
+        "name": "Last Share Found"
+      },
       "local_current_effort": {
         "name": "Current Effort"
       },
@@ -176,6 +179,12 @@
       },
       "pool_miners": {
         "name": "Pool Miners"
+      },
+      "pool_last_block_found_time": {
+        "name": "Last Block Found"
+      },
+      "pool_total_blocks_found": {
+        "name": "Total Blocks Found"
       },
       "sidechain_height": {
         "name": "Sidechain Height"

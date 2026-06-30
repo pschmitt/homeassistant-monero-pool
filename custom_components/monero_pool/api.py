@@ -163,9 +163,13 @@ class P2poolStats:
     local_total_shares: int | None
     local_shares_found: int | None
     local_shares_failed: int | None
+    local_last_share_found: int | None
     local_current_effort: float | None
     local_average_effort: float | None
     local_connections: int | None
+    pool_last_block_found: int | None
+    pool_last_block_found_time: int | None
+    pool_total_blocks_found: int | None
     p2p_connections: int | None
     p2p_incoming_connections: int | None
     p2p_peer_list_size: int | None
@@ -743,9 +747,15 @@ class P2poolClient(SshJsonFetcher):
             local_total_shares=_as_int(stratum.get("total_stratum_shares")),
             local_shares_found=_as_int(stratum.get("shares_found")),
             local_shares_failed=_as_int(stratum.get("shares_failed")),
+            local_last_share_found=_as_int(stratum.get("last_share_found_time")),
             local_current_effort=_as_float(stratum.get("current_effort")),
             local_average_effort=_as_float(stratum.get("average_effort")),
             local_connections=_as_int(stratum.get("connections")),
+            pool_last_block_found=_as_int(pool_statistics.get("lastBlockFound")),
+            pool_last_block_found_time=_as_int(
+                pool_statistics.get("lastBlockFoundTime")
+            ),
+            pool_total_blocks_found=_as_int(pool_statistics.get("totalBlocksFound")),
             p2p_connections=_as_int(p2p.get("connections")),
             p2p_incoming_connections=_as_int(p2p.get("incoming_connections")),
             p2p_peer_list_size=_as_int(p2p.get("peer_list_size")),
