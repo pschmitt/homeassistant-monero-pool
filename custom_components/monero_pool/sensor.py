@@ -13,7 +13,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfTime
+from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -26,7 +26,7 @@ from .api import (
     XmrigProxyStats,
     XmrigWorker,
 )
-from .const import DOMAIN, MODE_HASHVAULT, MODE_P2POOL, MODE_XMRIG_PROXY
+from .const import DOMAIN, MODE_HASHVAULT, MODE_P2POOL
 from .coordinator import MoneroPoolCoordinator
 from .entity import MoneroPoolEntity, suggest_entity_id
 
@@ -306,9 +306,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Monero Pool sensors from a config entry."""
-    coordinator: MoneroPoolCoordinator = hass.data[DOMAIN][config_entry.entry_id][
-        "coordinator"
-    ]
+    coordinator: MoneroPoolCoordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
     mode = config_entry.data["mode"]
     if mode == MODE_HASHVAULT:
         aggregate_descriptions = HASHVAULT_DESCRIPTIONS
@@ -353,9 +351,7 @@ async def async_setup_entry(
             async_add_entities(new_entities)
 
     async_add_missing_worker_entities()
-    config_entry.async_on_unload(
-        coordinator.async_add_listener(async_add_missing_worker_entities)
-    )
+    config_entry.async_on_unload(coordinator.async_add_listener(async_add_missing_worker_entities))
 
 
 class MoneroPoolAggregateSensor(MoneroPoolEntity, SensorEntity):
@@ -371,9 +367,7 @@ class MoneroPoolAggregateSensor(MoneroPoolEntity, SensorEntity):
         """Initialize the aggregate sensor."""
         super().__init__(coordinator)
         self.entity_description = description
-        self._attr_unique_id = (
-            f"{coordinator.config_entry.entry_id}:{description.key}"
-        )
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}:{description.key}"
         self.entity_id = suggest_entity_id(
             "sensor",
             coordinator,

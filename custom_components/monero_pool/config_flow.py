@@ -6,7 +6,6 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_NAME, CONF_SCAN_INTERVAL, CONF_URL
 from homeassistant.core import HomeAssistant, callback
@@ -103,12 +102,8 @@ def xmrig_proxy_schema(
                 default=defaults.get(CONF_URL, DEFAULT_XMRIG_PROXY_URL),
             ): TextSelector(),
             vol.Optional(CONF_SSH_HOST, default=defaults.get(CONF_SSH_HOST, "")): TextSelector(),
-            vol.Optional(CONF_SSH_KNOWN_HOSTS): TextSelector(
-                TextSelectorConfig(multiline=True)
-            ),
-            vol.Optional(CONF_SSH_PRIVATE_KEY): TextSelector(
-                TextSelectorConfig(multiline=True)
-            ),
+            vol.Optional(CONF_SSH_KNOWN_HOSTS): TextSelector(TextSelectorConfig(multiline=True)),
+            vol.Optional(CONF_SSH_PRIVATE_KEY): TextSelector(TextSelectorConfig(multiline=True)),
             token_marker: TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
             vol.Optional(
                 CONF_NAME,
@@ -131,13 +126,11 @@ def p2pool_schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_URL, DEFAULT_P2POOL_URL),
             ): TextSelector(),
             vol.Optional(CONF_SSH_HOST, default=defaults.get(CONF_SSH_HOST, "")): TextSelector(),
-            vol.Optional(CONF_SSH_KNOWN_HOSTS): TextSelector(
-                TextSelectorConfig(multiline=True)
+            vol.Optional(CONF_SSH_KNOWN_HOSTS): TextSelector(TextSelectorConfig(multiline=True)),
+            vol.Optional(CONF_SSH_PRIVATE_KEY): TextSelector(TextSelectorConfig(multiline=True)),
+            vol.Optional(CONF_TOKEN): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.PASSWORD)
             ),
-            vol.Optional(CONF_SSH_PRIVATE_KEY): TextSelector(
-                TextSelectorConfig(multiline=True)
-            ),
-            vol.Optional(CONF_TOKEN): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
             vol.Optional(CONF_NAME, default=defaults.get(CONF_NAME, "p2pool")): TextSelector(),
             vol.Required(
                 CONF_VERIFY_SSL,
@@ -337,8 +330,7 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                     or entry.data.get(CONF_SSH_KNOWN_HOSTS, ""),
                     CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY)
                     or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
-                    CONF_TOKEN: user_input.get(CONF_TOKEN)
-                    or entry.data.get(CONF_TOKEN, ""),
+                    CONF_TOKEN: user_input.get(CONF_TOKEN) or entry.data.get(CONF_TOKEN, ""),
                     CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
                 }
             else:
@@ -350,8 +342,7 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                     or entry.data.get(CONF_SSH_KNOWN_HOSTS, ""),
                     CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY)
                     or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
-                    CONF_TOKEN: user_input.get(CONF_TOKEN)
-                    or entry.data.get(CONF_TOKEN, ""),
+                    CONF_TOKEN: user_input.get(CONF_TOKEN) or entry.data.get(CONF_TOKEN, ""),
                     CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
                 }
             try:
@@ -436,7 +427,8 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_SSH_HOST: user_input.get(CONF_SSH_HOST, "").strip(),
                 CONF_SSH_KNOWN_HOSTS: user_input.get(CONF_SSH_KNOWN_HOSTS)
                 or entry.data.get(CONF_SSH_KNOWN_HOSTS, ""),
-                CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY) or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
+                CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY)
+                or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
                 CONF_TOKEN: user_input.get(CONF_TOKEN) or entry.data.get(CONF_TOKEN, ""),
                 CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
             }
@@ -478,7 +470,8 @@ class MoneroPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_SSH_HOST: user_input.get(CONF_SSH_HOST, "").strip(),
                 CONF_SSH_KNOWN_HOSTS: user_input.get(CONF_SSH_KNOWN_HOSTS)
                 or entry.data.get(CONF_SSH_KNOWN_HOSTS, ""),
-                CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY) or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
+                CONF_SSH_PRIVATE_KEY: user_input.get(CONF_SSH_PRIVATE_KEY)
+                or entry.data.get(CONF_SSH_PRIVATE_KEY, ""),
                 CONF_TOKEN: user_input.get(CONF_TOKEN) or entry.data.get(CONF_TOKEN, ""),
                 CONF_VERIFY_SSL: user_input[CONF_VERIFY_SSL],
             }

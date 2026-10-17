@@ -49,4 +49,3 @@ async def async_get_device_diagnostics(
     """Return diagnostics for a device."""
     del device
     return await async_get_config_entry_diagnostics(hass, config_entry)
-

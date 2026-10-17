@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 import aiohttp
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .api import HashvaultClient, P2poolClient, XmrigProxyClient
@@ -62,6 +62,9 @@ def create_client(
         ssh_known_hosts=data.get(CONF_SSH_KNOWN_HOSTS, ""),
         ssh_private_key=data.get(CONF_SSH_PRIVATE_KEY, ""),
     )
+
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:

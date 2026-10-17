@@ -31,4 +31,3 @@ class MoneroPoolEntity(CoordinatorEntity[MoneroPoolCoordinator]):
             model=self.coordinator.client.server_name,
             entry_type=DeviceEntryType.SERVICE,
         )
-

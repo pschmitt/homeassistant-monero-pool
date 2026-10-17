@@ -1,5 +1,4 @@
 {
-  "integration": "mdi:pickaxe",
   "entity": {
     "sensor": {
       "hash_rate": { "default": "mdi:speedometer" },

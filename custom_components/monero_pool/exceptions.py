@@ -13,4 +13,3 @@ class MoneroPoolConnectionError(MoneroPoolError):
 
 class MoneroPoolAuthError(MoneroPoolError):
     """Raised when authentication fails."""
-

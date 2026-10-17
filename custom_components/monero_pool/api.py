@@ -368,13 +368,9 @@ class XmrigProxyClient:
         # Build known_hosts: prefer inline config, fall back to discovered files
         if self._ssh_known_hosts:
             try:
-                known_hosts: Any = asyncssh.import_known_hosts(
-                    self._ssh_known_hosts + "\n"
-                )
+                known_hosts: Any = asyncssh.import_known_hosts(self._ssh_known_hosts + "\n")
             except (ValueError, asyncssh.Error) as err:
-                raise MoneroPoolConnectionError(
-                    f"Invalid SSH known_hosts data: {err}"
-                ) from err
+                raise MoneroPoolConnectionError(f"Invalid SSH known_hosts data: {err}") from err
         else:
             known_hosts = [
                 p
@@ -390,9 +386,7 @@ class XmrigProxyClient:
         if self._ssh_private_key:
             try:
                 # PEM/OpenSSH key material expects a trailing newline.
-                client_keys: Any = [
-                    asyncssh.import_private_key(self._ssh_private_key + "\n")
-                ]
+                client_keys: Any = [asyncssh.import_private_key(self._ssh_private_key + "\n")]
             except asyncssh.KeyImportError as err:
                 raise MoneroPoolAuthError(f"Invalid SSH private key: {err}") from err
         else:
@@ -432,7 +426,10 @@ class XmrigProxyClient:
 
         _LOGGER.debug(
             "SSH connecting to %s as %s (known_hosts=%s, client_keys=%s)",
-            hostname, username, known_hosts, client_keys,
+            hostname,
+            username,
+            known_hosts,
+            client_keys,
         )
 
         try:
@@ -563,13 +560,9 @@ class SshJsonFetcher:
         """Fetch JSON by running curl on the remote SSH host."""
         if self._ssh_known_hosts:
             try:
-                known_hosts: Any = asyncssh.import_known_hosts(
-                    self._ssh_known_hosts + "\n"
-                )
+                known_hosts: Any = asyncssh.import_known_hosts(self._ssh_known_hosts + "\n")
             except (ValueError, asyncssh.Error) as err:
-                raise MoneroPoolConnectionError(
-                    f"Invalid SSH known_hosts data: {err}"
-                ) from err
+                raise MoneroPoolConnectionError(f"Invalid SSH known_hosts data: {err}") from err
         else:
             known_hosts = [
                 p
@@ -583,9 +576,7 @@ class SshJsonFetcher:
 
         if self._ssh_private_key:
             try:
-                client_keys: Any = [
-                    asyncssh.import_private_key(self._ssh_private_key + "\n")
-                ]
+                client_keys: Any = [asyncssh.import_private_key(self._ssh_private_key + "\n")]
             except asyncssh.KeyImportError as err:
                 raise MoneroPoolAuthError(f"Invalid SSH private key: {err}") from err
         else:
@@ -623,7 +614,10 @@ class SshJsonFetcher:
 
         _LOGGER.debug(
             "SSH connecting to %s as %s (known_hosts=%s, client_keys=%s)",
-            hostname, username, known_hosts, client_keys,
+            hostname,
+            username,
+            known_hosts,
+            client_keys,
         )
 
         try:
@@ -641,9 +635,7 @@ class SshJsonFetcher:
         if result.exit_status != 0:
             msg = (result.stderr or "").strip()
             _LOGGER.debug("SSH fetch failed (exit %d): %s", result.exit_status, msg)
-            raise MoneroPoolConnectionError(
-                f"SSH fetch failed: {msg or result.exit_status}"
-            )
+            raise MoneroPoolConnectionError(f"SSH fetch failed: {msg or result.exit_status}")
 
         try:
             return json.loads(result.stdout)
@@ -752,9 +744,7 @@ class P2poolClient(SshJsonFetcher):
             local_average_effort=_as_float(stratum.get("average_effort")),
             local_connections=_as_int(stratum.get("connections")),
             pool_last_block_found=_as_int(pool_statistics.get("lastBlockFound")),
-            pool_last_block_found_time=_as_int(
-                pool_statistics.get("lastBlockFoundTime")
-            ),
+            pool_last_block_found_time=_as_int(pool_statistics.get("lastBlockFoundTime")),
             pool_total_blocks_found=_as_int(pool_statistics.get("totalBlocksFound")),
             p2p_connections=_as_int(p2p.get("connections")),
             p2p_incoming_connections=_as_int(p2p.get("incoming_connections")),
