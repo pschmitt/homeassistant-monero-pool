@@ -78,15 +78,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     """Set up Monero Pool from a config entry."""
     client = create_client(hass, dict(config_entry.data))
     coordinator = MoneroPoolCoordinator(hass, client, config_entry)
-    await coordinator.async_config_entry_first_refresh()
 
     hass.data[DOMAIN][config_entry.entry_id] = {
         "client": client,
         "coordinator": coordinator,
     }
 
+    if coordinator.data is None:
+        coordinator.last_update_success = False
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     config_entry.async_on_unload(config_entry.add_update_listener(async_update_listener))
+    config_entry.async_create_background_task(
+        hass, coordinator.async_refresh(), "monero_pool_first_refresh"
+    )
     return True
 
 
