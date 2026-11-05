@@ -1,59 +1,45 @@
-# Monero Pool for Home Assistant
+<p align="center">
+  <img src="logo.png" width="128" alt="Monero Pool integration logo">
+</p>
 
-`monero_pool` is a Home Assistant custom integration for Monero mining stats.
-It supports Hashvault.pro wallet stats and XMRig proxy `/1/workers` stats.
+<p align="center">
+  <a href="https://my.home-assistant.io/redirect/marketplace_repository/?owner=pschmitt&amp;repository=homeassistant-monero-pool&amp;category=integration"><img src="https://my.home-assistant.io/badges/marketplace_repository.svg" alt="Open this integration in Home Assistant Marketplace"></a>
+</p>
+
+<h1 align="center">Monero Pool for Home Assistant</h1>
+
+<p align="center">Track Hashvault wallet payouts or XMRig proxy workers in Home Assistant.</p>
 
 ## Features
 
-- UI config flow for Hashvault.pro and XMRig proxy sources
-- Aggregate hashrate, worker count, and miner count sensors
-- Hashvault payout sensors for confirmed balance, payout progress, total paid,
-  payout threshold, and last withdrawal time
-- XMRig proxy sensors for 1m, 10m, and 1h aggregate hashrates plus accepted and
-  rejected shares when exposed by the proxy
-- Dynamic per-worker hashrate sensors
-- Options flow for the poll interval
+- **Hashvault stats:** Show balance, payout progress, total paid, withdrawal time and aggregate hashrate.
+- **XMRig proxy stats:** Report one-, ten- and sixty-minute hashrates and available share counts.
+- **Worker sensors:** Create per-worker hashrate sensors from the proxy response.
+- **Polling:** Adjust the update interval in the integration options.
 
-## Installation
+## Install
 
-[![Open this integration in Home Assistant Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=pschmitt&repository=homeassistant-monero-pool&category=integration)
+Use the Marketplace badge above on Home Assistant 2026.11 or later to add this
+repository as a custom integration. On older versions, add it as a HACS
+custom repository of type **Integration**. Install and restart Home Assistant.
+The badge does not imply a public catalog listing. For manual installation,
+copy `custom_components/monero_pool` into Home Assistant's `custom_components/`
+directory and restart.
 
-### Home Assistant Marketplace
+## Quick start
 
-Click the badge above to add this repository. For older installations, add
-`https://github.com/pschmitt/homeassistant-monero-pool` to HACS as a custom
-integration repository. Install **Monero Pool**, then restart Home Assistant.
+1. Add **Monero Pool** under **Settings → Devices & services → Add integration**.
+2. For Hashvault, enter a wallet address; the default API is
+   `https://api.hashvault.pro`.
+3. For XMRig proxy, enter the full workers endpoint URL, such as
+   `http://miner.example.com:9674/1/workers`.
+4. Inspect the aggregate and per-worker sensors.
 
-### Manual
-
-Copy `custom_components/monero_pool/` into your Home Assistant
-`custom_components/` directory, then restart Home Assistant.
-
-## Configuration
-
-Go to **Settings -> Devices & services -> Add integration** and search for
-**Monero Pool**.
-
-For Hashvault.pro, enter the wallet address. The default API URL is
-`https://api.hashvault.pro`.
-
-For XMRig proxy, enter the full workers endpoint URL, for example:
-
-```text
-http://10.0.0.10:9674/1/workers
-```
-
-If the proxy HTTP API is only bound to localhost on the mining host, set the
-endpoint URL to the remote localhost URL and fill **SSH host** with the host HA
-should SSH into:
-
-```text
-Workers endpoint URL: http://127.0.0.1:9674/1/workers
-SSH host: pschmitt@rofl-12.brkn.lol
-```
-
-If your proxy API requires an access token, enter it in the token field.
+For a proxy HTTP API bound only to localhost, use
+`http://127.0.0.1:9674/1/workers` as the endpoint and enter
+`user@miner.example.com` as the SSH host. Enter an access token if the proxy
+requires one.
 
 ## License
 
-GPL-3.0-or-later - see [LICENSE](LICENSE).
+[GPL-3.0-or-later](LICENSE).
