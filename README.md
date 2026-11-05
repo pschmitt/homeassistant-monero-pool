@@ -16,12 +16,13 @@ It supports Hashvault.pro wallet stats and XMRig proxy `/1/workers` stats.
 
 ## Installation
 
-### HACS
+[![Open this integration in Home Assistant Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=pschmitt&repository=homeassistant-monero-pool&category=integration)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=pschmitt&repository=homeassistant-monero-pool&category=integration)
+### Home Assistant Marketplace
 
-Add `https://github.com/pschmitt/homeassistant-monero-pool` as a custom HACS
-integration repository, install **Monero Pool**, then restart Home Assistant.
+Click the badge above to add this repository. For older installations, add
+`https://github.com/pschmitt/homeassistant-monero-pool` to HACS as a custom
+integration repository. Install **Monero Pool**, then restart Home Assistant.
 
 ### Manual
 
